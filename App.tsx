@@ -24,7 +24,6 @@ const Header: React.FC = () => (
 
 const LandingPage: React.FC<{ onContinue: () => void }> = ({ onContinue }) => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-    {/* Decorative background elements */}
     <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px]"></div>
     <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/20 rounded-full blur-[120px]"></div>
     
@@ -206,6 +205,7 @@ const App: React.FC = () => {
             {viewMode === ViewMode.PROFILE_LIST && (
               <ProfileList 
                 currentProfile={currentProfile} 
+                maxLoad={loadSettings.maxLoad}
                 onSelect={(p) => { setCurrentProfile(p); setOverride8760(null); }} 
               />
             )}
@@ -225,7 +225,7 @@ const App: React.FC = () => {
               />
             )}
 
-            <Visualizer results={results} />
+            {viewMode !== ViewMode.PROFILE_LIST && <Visualizer results={results} />}
           </div>
 
           <div className="space-y-6">
@@ -263,7 +263,7 @@ const App: React.FC = () => {
   );
 };
 
-const ProfileList: React.FC<{ currentProfile: ProfileData, onSelect: (p: ProfileData) => void }> = ({ currentProfile, onSelect }) => {
+const ProfileList: React.FC<{ currentProfile: ProfileData, maxLoad: number, onSelect: (p: ProfileData) => void }> = ({ currentProfile, maxLoad, onSelect }) => {
   const categories = useMemo<Record<string, ProfileData[]>>(() => {
     const map: Record<string, ProfileData[]> = {};
     ASHRAE_PROFILES_LIST.forEach(p => {
@@ -273,30 +273,102 @@ const ProfileList: React.FC<{ currentProfile: ProfileData, onSelect: (p: Profile
     return map;
   }, []);
 
+  const chartDataDaily = useMemo(() => currentProfile.daily.map((v, i) => ({ x: `${i}h`, val: v * maxLoad })), [currentProfile, maxLoad]);
+  const chartDataWeekly = useMemo(() => currentProfile.weekly.map((v, i) => ({ x: DAYS_OF_WEEK[i], val: v * 100 })), [currentProfile]);
+  const chartDataMonthly = useMemo(() => currentProfile.monthly.map((v, i) => ({ x: MONTHS[i], val: v * 100 })), [currentProfile]);
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[500px]">
-      <h3 className="text-lg font-bold mb-6">Lista de Perfis (Agrupados por Edifício)</h3>
-      <div className="space-y-8 overflow-y-auto max-h-[700px] pr-2">
-        {(Object.entries(categories) as [string, ProfileData[]][]).map(([cat, profiles]) => (
-          <div key={cat}>
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-b pb-2">{cat}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row h-[700px] overflow-hidden">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-72 border-r border-slate-100 flex flex-col bg-slate-50">
+        <div className="p-4 border-b bg-white">
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Tipologias ASHRAE</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-6">
+          {(Object.entries(categories) as [string, ProfileData[]][]).map(([cat, profiles]) => (
+            <div key={cat} className="space-y-1">
+              <h4 className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{cat}</h4>
               {profiles.map(p => (
                 <button
                   key={p.name}
                   onClick={() => onSelect(p)}
-                  className={`p-4 rounded-xl border text-left transition-all hover:bg-slate-50 group ${
-                    currentProfile.name === p.name ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-100'
+                  className={`w-full p-3 rounded-lg text-left transition-all text-xs font-semibold ${
+                    currentProfile.name === p.name 
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20' 
+                    : 'text-slate-600 hover:bg-white hover:shadow-sm'
                   }`}
                 >
-                  <span className="block font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{p.name}</span>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{p.description}</p>
+                  {p.name}
                 </button>
               ))}
             </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* Main Preview Content */}
+      <section className="flex-1 flex flex-col bg-white overflow-y-auto">
+        <div className="p-6 border-b">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded uppercase">{currentProfile.category}</span>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{currentProfile.name}</h2>
           </div>
-        ))}
-      </div>
+          <p className="text-slate-500 text-sm max-w-2xl">{currentProfile.description}</p>
+        </div>
+
+        <div className="p-6 space-y-8">
+          {/* Daily Chart Preview */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Evolução Diária (kW)</h4>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartDataDaily}>
+                  <defs><linearGradient id="prevGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="x" fontSize={9} />
+                  <YAxis fontSize={9} unit="kW" />
+                  <Tooltip contentStyle={{borderRadius: '8px', fontSize: '10px'}} />
+                  <Area type="monotone" dataKey="val" stroke="#3b82f6" fill="url(#prevGrad)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Weekly Variation Preview */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Variação Semanal (%)</h4>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartDataWeekly}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="x" fontSize={9} />
+                    <YAxis fontSize={9} unit="%" />
+                    <Tooltip contentStyle={{borderRadius: '8px', fontSize: '10px'}} />
+                    <Bar dataKey="val" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Monthly Variation Preview */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Sazonalidade Mensal (%)</h4>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartDataMonthly}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="x" fontSize={9} />
+                    <YAxis fontSize={9} unit="%" />
+                    <Tooltip contentStyle={{borderRadius: '8px', fontSize: '10px'}} />
+                    <Bar dataKey="val" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
