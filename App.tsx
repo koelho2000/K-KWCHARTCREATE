@@ -22,7 +22,65 @@ const Header: React.FC = () => (
   </header>
 );
 
+const LandingPage: React.FC<{ onContinue: () => void }> = ({ onContinue }) => (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
+    {/* Decorative background elements */}
+    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px]"></div>
+    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/20 rounded-full blur-[120px]"></div>
+    
+    <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-12 rounded-3xl shadow-2xl text-center relative z-10">
+      <div className="mb-8 inline-flex items-center justify-center w-20 h-20 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/20 rotate-3 transform transition hover:rotate-0">
+        <span className="text-4xl">⚡</span>
+      </div>
+      
+      <h1 className="text-5xl font-black text-white mb-4 tracking-tighter uppercase italic">
+        {APP_INFO.name}
+      </h1>
+      
+      <p className="text-slate-400 text-lg mb-12 font-medium max-w-md mx-auto leading-relaxed">
+        Ferramenta profissional para geração de cargas térmicas e perfis 8760h.
+      </p>
+
+      <div className="space-y-6 mb-12">
+        <div className="flex justify-center gap-8 text-sm uppercase tracking-widest font-bold">
+          <div className="flex flex-col">
+            <span className="text-slate-500 mb-1">Versão</span>
+            <span className="text-blue-400">{APP_INFO.version}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-slate-500 mb-1">Data</span>
+            <span className="text-blue-400">{APP_INFO.date}</span>
+          </div>
+        </div>
+        
+        <div className="pt-6 border-t border-slate-800">
+          <p className="text-slate-300 font-semibold mb-1">{APP_INFO.author}</p>
+          <a 
+            href={`https://${APP_INFO.website}`} 
+            target="_blank" 
+            rel="noreferrer" 
+            className="text-blue-500 hover:text-blue-400 transition-colors text-sm"
+          >
+            {APP_INFO.website}
+          </a>
+        </div>
+      </div>
+
+      <button 
+        onClick={onContinue}
+        className="group relative inline-flex items-center justify-center px-10 py-4 font-bold text-white transition-all duration-200 bg-blue-600 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-900/30"
+      >
+        <span>Continuar para a Aplicação</span>
+        <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+);
+
 const App: React.FC = () => {
+  const [showLanding, setShowLanding] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.PROFILE_LIST);
   const [loadSettings, setLoadSettings] = useState<LoadSettings>({ maxLoad: 1000 });
   const [currentProfile, setCurrentProfile] = useState<ProfileData>(ASHRAE_PROFILES_LIST[0]);
@@ -85,8 +143,12 @@ const App: React.FC = () => {
     reader.readAsText(file);
   };
 
+  if (showLanding) {
+    return <LandingPage onContinue={() => setShowLanding(false)} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col font-sans animate-in fade-in duration-700">
       <Header />
 
       <main className="flex-1 p-6 max-w-[1400px] mx-auto w-full space-y-8">
