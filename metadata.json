@@ -1,0 +1,5 @@
+{
+  "name": "K-KWCHARTCREATE",
+  "description": "Professional tool for thermal load generation and 8760h profile creation based on ASHRAE standards with interactive table and chart editors.",
+  "requestFramePermissions": []
+}
